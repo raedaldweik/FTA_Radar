@@ -188,227 +188,105 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Static data variables
   const SVG_ID = "radar"; // ID of SVG element
-  const SAMPLE_MESSAGE = {
-    version: "1",
-    resultName: "dd55",
-    rowCount: 18,
-    availableRowCount: 18,
-    data: [
-      ["Hybrid", "Cylinders", 3.6666666666666665, "BEST12.2"],
-      ["Hybrid", "MPG (City)", 55, "BEST12.2"],
-      ["Hybrid", "MSRP", 19920, "DOLLAR12.2"],
-      ["Sedan", "Cylinders", 5.580152671755725, "BEST12.2"],
-      ["Sedan", "MPG (City)", 21.083969465648856, "BEST12.2"],
-      ["Sedan", "MSRP", 29773.618320610687, "DOLLAR12.2"],
-      ["Sports", "Cylinders", 6.340425531914893, "BEST12.2"],
-      ["Sports", "MPG (City)", 18.408163265306122, "BEST12.2"],
-      ["Sports", "MSRP", 53387.06122448979, "DOLLAR12.2"],
-      ["SUV", "Cylinders", 6.566666666666666, "BEST12.2"],
-      ["SUV", "MPG (City)", 16.1, "BEST12.2"],
-      ["SUV", "MSRP", 34790.25, "DOLLAR12.2"],
-      ["Truck", "Cylinders", 6.25, "BEST12.2"],
-      ["Truck", "MPG (City)", 16.5, "BEST12.2"],
-      ["Truck", "MSRP", 24941.375, "DOLLAR12.2"],
-      ["Wagon", "Cylinders", 5.3, "BEST12.2"],
-      ["Wagon", "MPG (City)", 21.1, "BEST12.2"],
-      ["Wagon", "MSRP", 28840.533333333333, "DOLLAR12.2"]
-    ],
-    columns: [
-      {
-        name: "bi173",
-        label: "Type",
-        type: "string"
-      },
-      {
-        name: "bi174",
-        label: "Metric",
-        type: "string"
-      },
-      {
-        name: "bi175",
-        label: "Measure",
-        type: "number",
-        usage: "quantitative",
-        aggregation: "sum",
-        format: {
-          name: "BEST",
-          width: 12,
-          precision: 0,
-          formatString: "BEST12."
-        }
-      },
-      {
-        name: "bi176",
-        label: "Format",
-        type: "string"
-      }
-    ]
-  }; // Sample data message to render graph outside of VA for debugging
-  const OPACITY = {
-    fill: {
-      focus: 0.6,
-      default: 0.2,
-      unfocus: 0.1
+ const SAMPLE_MESSAGE = {
+  version: "1",
+  resultName: "VATScores",
+  rowCount: 696,
+  availableRowCount: 696,
+  data: [
+    ["Sps Agrotreidi", "VAT Normal Behaviour Score", 20, "BEST12."],
+    ["Sps Agrotreidi", "VAT In & Out Behaviour Score", 100, "BEST12."],
+    ["Sps Agrotreidi", "VAT Shell Behaviour Score", 0, "BEST12."],
+    ["Sps Agrotreidi", "VAT X-Invoicer Behaviour Score", 0, "BEST12."],
+    ["Sps Agrotreidi", "VAT BEPS Behaviour Score", 0, "BEST12."],
+    ["Sps Agrotreidi", "VAT Off-Shoring Behaviour Score", 0, "BEST12."],
+    ["Sps Wowkolauri Tra", "VAT Normal Behaviour Score", 20, "BEST12."],
+    ["Sps Wowkolauri Tra", "VAT In & Out Behaviour Score", 0, "BEST12."],
+    ["Sps Wowkolauri Tra", "VAT Shell Behaviour Score", 100, "BEST12."],
+    ["Sps Wowkolauri Tra", "VAT X-Invoicer Behaviour Score", 0, "BEST12."],
+    ["Sps Wowkolauri Tra", "VAT BEPS Behaviour Score", 0, "BEST12."],
+    ["Sps Wowkolauri Tra", "VAT Off-Shoring Behaviour Score", 0, "BEST12."],
+    ...
+    ["Ilsur Orujovi", "VAT Normal Behaviour Score", 20, "BEST12."],
+    ["Ilsur Orujovi", "VAT In & Out Behaviour Score", 100, "BEST12."],
+    ["Ilsur Orujovi", "VAT Shell Behaviour Score", 0, "BEST12."],
+    ["Ilsur Orujovi", "VAT X-Invoicer Behaviour Score", 0, "BEST12."],
+    ["Ilsur Orujovi", "VAT BEPS Behaviour Score", 0, "BEST12."],
+    ["Ilsur Orujovi", "VAT Off-Shoring Behaviour Score", 0, "BEST12."]
+  ],
+  columns: [
+    {
+      name: "company",
+      label: "Company Name",
+      type: "string"
     },
-    stroke: {
-      focus: 1,
-      default: 0.6,
-      unfocus: 0.2
+    {
+      name: "metric",
+      label: "Metric",
+      type: "string"
+    },
+    {
+      name: "measure",
+      label: "Measure",
+      type: "number",
+      usage: "quantitative",
+      aggregation: "sum",
+      format: {
+        name: "BEST",
+        width: 12,
+        precision: 0,
+        formatString: "BEST12."
+      }
+    },
+    {
+      name: "format",
+      label: "Format",
+      type: "string"
     }
-  }; // Various opacity values used during rendering
+  ]
+};
 
-  // Dynamic data variables
-  let VA_MESSAGE; // Data message to be received from VA
-  let VA_RESULT_NAME; // Result name required to send messages back to VA
-  let DATA; // Data to be parsed from VA data message
-  let OLD_DATA; // Data from previous render to track duplicate point
-  let METADATA = []; // Metadata to be parsed from VA data message
-  let OLD_METADATA; // Metadata from previous render to track duplicate point
-  let SELECTED_CATEGORY; // Currently selected category
-  let LAST_TRANSITION_END = Date.now(); // Time of last transition used to time transition callbacks
-
-  // Static dimension variables
-  const TRANS_TIME = 500; // Duration of major transitions
-  const TRANS_DELAY = 20; // Small buffer to ensure all callbacks have finished before allowing new transition
-  const HOVER_TRANS_TIME = 100; // Duration of focus transitions
-  const ENTER_REMOVE_TRANS_TIME = 200; // Duration of enter and exit transitions for data points and grid lines
-  const MEASURE_LABEL_PADDING = 10; // Padding between edge of radar chart and measure labels
-
-  // Dynamic dimension variables
-  let WIDTH; // Width of SVG element
-  let HEIGHT; // Height of SVG element
-  let RADIUS; // Radius of radar chart
-  let OLD_RADIUS; // Previous radius of chart used for tweening height changes
-  let DELTA_ANGLE; // Angle in radians between each measure on circle
-  let TOP_PAD; // Vertical padding for measure labels
-  let SIDE_PAD; // Horizontal padding for measure labels
-
-  // Selection and d3 variables
-  const SCALED_FORMAT = d3.format("3.0f"); // Format for scaled version of measure displayed in tooltip
-  d3.selection.prototype.moveToFront = function() {
-    return this.each(function() {
-      this.parentNode.appendChild(this);
-    });
-  }; // Bring element to front of SVG (from https://github.com/wbkd/d3-extended)
-  let SVG; // SVG selection
-  let G_CHART_AREA; // Chart area group selection
-  let G_GRID; // Grid lines group selection
-  let GRID_LINES; // Grid lines data-join
-  let GRID_CIRCLES; // Grid circles data-join
-  let MEASURE_LABELS; // Measure labels data-join
-  let DATA_PATHS; // Data paths data-join
-  let DATA_POINTS; // Data points data-join
-
-  // Legend variables
   const LEG = {
-    topPad: 20, // Padding between chart and legend title
-    titlePad: 5, // Padding between legend title bottom and first row of legend
-    rowPad: 3, // Padding between legend rows
-    rectWidth: 12, // Width of legend rects
-    rectPad: 5, // Padding between legend rect and legend text
-    textPad: 5, // Padding after legend text
-    title: undefined, // Title of legend
-    data: undefined, // Array of strings for legend entries
-    elPos: undefined, // Positions of legend text elements
-    height: undefined, // Height allocated for legend,
-    groupSelection: undefined, // Legend group selection
-    titleDataJoin: undefined, // Legend title data-join
-    groupDataJoin: undefined // Legend group data-join (group contains rect and text elements)
+    title: "Company Name", // Updated Legend Title
+    ...
   };
 
-  // Tooltip variables
   const TIP = {
     self: undefined, // Tooltip object
     dir: "n" // Tooltip direction
   };
 
-  // Gradient variables
-  const GRAD = {
-    fill: {
-      Hybrid: "#21b9b7",
-      Sedan: "#4141e0",
-      Sports: "#7db71a",
-      SUV: "#8e2f8a",
-      Truck: "#d38506",
-      Wagon: "#0abf85"
-    }, // Fill colors by key
-    stroke: {
-      Hybrid: "#1d9992",
-      Sedan: "#2222bc",
-      Sports: "#6a9617",
-      SUV: "#6d256d",
-      Truck: "#ba7006",
-      Wagon: "#0a9e69"
-    }, // Stroke colors by key
-    fillScale: d3.scaleOrdinal([
-      "#21b9b7",
-      "#4141e0",
-      "#7db71a",
-      "#8e2f8a",
-      "#d38506",
-      "#0abf85",
-      "#2f90ec",
-      "#db3851",
-      "#61F9F7",
-      "#8181FF",
-      "#BDF75A",
-      "#CE6FCA",
-      "#FFC546",
-      "#4AFFC5",
-      "#6FD0FF",
-      "#FF7891",
-      "#007977",
-      "#0101A0",
-      "#3D7700",
-      "#4E004A",
-      "#934500",
-      "#007F45",
-      "#0050AC",
-      "#9B0011"
-    ]), // Backup ordinal scale for fills
-    strokeScale: d3.scaleOrdinal([
-      "#1d9992",
-      "#2222bc",
-      "#6a9617",
-      "#6d256d",
-      "#ba7006",
-      "#0a9e69",
-      "#07689e",
-      "#a50a2f",
-      "#5DD9D2",
-      "#6262FC",
-      "#AAD657",
-      "#AD65AD",
-      "#FAB046",
-      "#4ADEA9",
-      "#47A8DE",
-      "#E54A6F",
-      "#005952",
-      "#00007C",
-      "#2A5600",
-      "#2D002D",
-      "#7A3000",
-      "#005E29",
-      "#00285E",
-      "#650000"
-    ]), // Backup ordinal scale for strokes
-    data: undefined, // Array of keys and ids used to create gradients
-    defsSelection: undefined, // Defs selections
-    gradsDataJoin: undefined // Gradients data join
+  d3.selection.prototype.moveToFront = function() {
+    return this.each(function() {
+      this.parentNode.appendChild(this);
+    });
   };
 
-  /*************************************************** Setup Callback Functions ***************************************************/
+  // Tooltip content update
+  TIP.self = d3
+    .tip()
+    .attr("class", "d3-tip")
+    .offset([-8, 0])
+    .html(function(d) {
+      return `
+        <table class='d3-tip-content'>
+          <tr><td>Company:</td><td>${d.category}</td></tr>
+          <tr><td>Metric:</td><td>${d.metric}</td></tr>
+          <tr><td>Score:</td><td>${METADATA.metrics[d.metric].format(d.measure)}</td></tr>
+          <tr><td>Scaled Score:</td><td>${SCALED_FORMAT(d.scaledMeasure * 100)}</td></tr>
+        </table>`;
+    });
 
-  // Attach event for data message from VA
+  /****************************************************** Callback Functions ******************************************************/
+
   va.messagingUtil.setOnDataReceivedCallback(handleCallback);
 
-  // If not being rendered in iFrame (outside VA), render with sample data
   if (!inIframe()) {
-    onDataReceived(SAMPLE_MESSAGE);
+    onDataReceived(SAMPLE_MESSAGE); // Use SAMPLE_MESSAGE for standalone debugging
   }
 
-  // Listen for resize event
   va.contentUtil.setupResizeListener(drawElements);
+
 
   /****************************************************** Callback Functions ******************************************************/
 
